@@ -3,8 +3,6 @@
 # Compiled class file
 *.class
 
-.idea/*
-
 # Log file
 *.log
 
@@ -26,12 +24,6 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 
-.idea/$CACHE_FILE$
-.idea/.gitignore
-.idea/kotlinc.xml
-.idea/libraries/
-.idea/misc.xml
-.idea/modules.xml
 lox.iml
+.idea/*
 out/
-src/
