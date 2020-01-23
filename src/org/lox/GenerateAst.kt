@@ -15,7 +15,7 @@ fun main(args: Array<String>) {
 		outputDir, "Expr", listOf(
 			"Binary   : Expr left, Token operator, Expr right",
 			"Grouping : Expr expression",
-			"Literal  : Any value",
+			"Literal  : Any? value",
 			"Unary    : Token operator, Expr right"
 		)
 	)
@@ -30,7 +30,7 @@ fun defineAst(outputDir: String, baseName: String, types: List<String>) {
 //	writer.println("import java.util.List;")
 	writer.println("import org.lox.Token")
 	writer.println()
-	writer.println("internal abstract class $baseName {")
+	writer.println("abstract class $baseName {")
 
 	defineVisitor(writer, baseName, types)
 
@@ -49,7 +49,7 @@ fun defineAst(outputDir: String, baseName: String, types: List<String>) {
 
 fun defineType(writer: PrintWriter, baseName: String, className: String, fieldList: String) {
 	writer.print(
-		"  internal class $className"
+		"  class $className"
 	)
 	// Store parameters in fields.
 	val fields = fieldList.split(", ")
