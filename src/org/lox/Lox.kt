@@ -24,12 +24,12 @@ var hadError = false
 fun run(source: String) {
 	val scanner = Scanner(source)
 	val tokens = scanner.scanTokens()
+	val parser = Parser(tokens)
+	val expression = parser.parse()
 
-	// For now, just print the tokens.
-	// For now, just print the tokens.
-	for (token in tokens) {
-		println(token)
-	}
+	if (hadError) return
+
+	println(AstPrinter().print(expression))
 }
 
 fun runFile(path: String) {
@@ -51,6 +51,14 @@ fun runPrompt() {
 
 fun error(line: Int, message: String) {
 	report(line, "", message)
+}
+
+fun error(token: Token, message: String) {
+	if (token.type == TokenType.EOF) {
+		report(token.line, " at end", message)
+	} else {
+		report(token.line, " at '${token.lexeme}'", message)
+	}
 }
 
 fun report(line: Int, where: String, message: String) {
