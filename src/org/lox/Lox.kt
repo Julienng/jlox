@@ -19,7 +19,9 @@ fun main(args: Array<String>) {
 	}
 }
 
+val interpreter = Interpreter()
 var hadError = false
+var hadRuntimeError = false
 
 fun run(source: String) {
 	val scanner = Scanner(source)
@@ -29,7 +31,10 @@ fun run(source: String) {
 
 	if (hadError) return
 
-	println(AstPrinter().print(expression))
+	// println(AstPrinter().print(expression))
+	if (expression != null) {
+		interpreter.interpret(expression)
+	}
 }
 
 fun runFile(path: String) {
@@ -37,6 +42,7 @@ fun runFile(path: String) {
 	run(String(bytes, Charset.defaultCharset()))
 
 	if (hadError) exitProcess(65)
+	if (hadRuntimeError) exitProcess(70)
 }
 
 fun runPrompt() {
@@ -59,6 +65,11 @@ fun error(token: Token, message: String) {
 	} else {
 		report(token.line, " at '${token.lexeme}'", message)
 	}
+}
+
+fun runtimeError(error: RuntimeError) {
+	System.err.println("${error.message}\n[line ${error.token.line}]")
+	hadRuntimeError = true
 }
 
 fun report(line: Int, where: String, message: String) {
