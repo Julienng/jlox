@@ -31,10 +31,7 @@ fun run(source: String) {
 
     if (hadError) return
 
-    // println(AstPrinter().print(expression))
-    if (expression != null) {
-        interpreter.interpret(expression)
-    }
+    interpreter.interpret(expression)
 }
 
 fun runFile(path: String) {

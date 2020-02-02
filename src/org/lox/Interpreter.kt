@@ -1,6 +1,7 @@
 package org.lox
 
-import org.lox.expr.Expr
+import org.lox.ast.Expr
+import org.lox.ast.Stmt
 
 fun stringify(value: Any?): String {
     if (value == null) return "nil"
@@ -17,15 +18,64 @@ fun stringify(value: Any?): String {
     return value.toString()
 }
 
-class Interpreter : Expr.Visitor<Any?> {
+class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
+    private var environment = Environment()
 
-    fun interpret(expression: Expr) {
+    fun interpret(statements: List<Stmt?>) {
         try {
-            val result = evaluate(expression)
-            println(stringify(result))
+            for (statement in statements) {
+                execute(statement)
+            }
         } catch (err: RuntimeError) {
             runtimeError(err)
         }
+    }
+
+    private fun execute(stmt: Stmt?) {
+        stmt?.accept(this)
+    }
+
+    private fun executeBlock(statements: List<Stmt?>, environment: Environment) {
+        val previous = this.environment
+
+        try {
+            this.environment = environment
+
+            for (statement in statements) {
+                execute(statement)
+            }
+        } finally {
+            this.environment = previous
+        }
+    }
+
+    override fun visitBlockStmt(stmt: Stmt.Block) {
+        executeBlock(stmt.statements, Environment(environment))
+    }
+
+    override fun visitVarStmt(stmt: Stmt.Var) {
+        var value: Any? = null
+        if (stmt.initializer != null) {
+            value = evaluate(stmt.initializer)
+        }
+
+        environment.define(stmt.name.lexeme, value)
+    }
+
+    override fun visitExpressionStmt(stmt: Stmt.Expression) {
+        evaluate(stmt.expression)
+    }
+
+    override fun visitPrintStmt(stmt: Stmt.Print) {
+        val value = evaluate(stmt.expression)
+        println(stringify(value))
+    }
+
+    override fun visitAssignExpr(expr: Expr.Assign): Any? {
+        val value = evaluate(expr.value)
+
+        environment.assign(expr.name, value);
+        return value
     }
 
     override fun visitBinaryExpr(expr: Expr.Binary): Any? {
@@ -87,6 +137,10 @@ class Interpreter : Expr.Visitor<Any?> {
 
     override fun visitLiteralExpr(expr: Expr.Literal): Any? {
         return expr.value
+    }
+
+    override fun visitVariableExpr(expr: Expr.Variable): Any? {
+        return environment[expr.name]
     }
 
     override fun visitUnaryExpr(expr: Expr.Unary): Any? {

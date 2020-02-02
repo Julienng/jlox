@@ -13,10 +13,21 @@ fun main(args: Array<String>) {
 
     defineAst(
         outputDir, "Expr", listOf(
+            "Assign   : Token name, Expr value",
             "Binary   : Expr left, Token operator, Expr right",
             "Grouping : Expr expression",
             "Literal  : Any? value",
-            "Unary    : Token operator, Expr right"
+            "Unary    : Token operator, Expr right",
+            "Variable : Token name"
+        )
+    )
+
+    defineAst(
+        outputDir, "Stmt", listOf(
+            "Block      : List<Stmt?> statements",
+            "Expression : Expr expression",
+            "Print      : Expr expression",
+            "Var        : Token name, Expr? initializer"
         )
     )
 }
@@ -25,7 +36,7 @@ fun defineAst(outputDir: String, baseName: String, types: List<String>) {
     val path = "$outputDir/$baseName.kt"
     val writer = PrintWriter(path, "UTF-8")
 
-    writer.println("package org.lox.expr;")
+    writer.println("package org.lox.ast")
     writer.println()
 //	writer.println("import java.util.List;")
     writer.println("import org.lox.Token")

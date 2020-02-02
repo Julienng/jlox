@@ -1,7 +1,7 @@
 package org.lox
 
-import org.lox.expr.Expr
-import org.lox.expr.Expr.*
+import org.lox.ast.Expr
+import org.lox.ast.Expr.*
 
 abstract class Printer : Visitor<String> {
     fun print(expr: Expr?): String {
@@ -23,6 +23,10 @@ abstract class Printer : Visitor<String> {
 }
 
 class AstPrinter : Printer() {
+    override fun visitAssignExpr(expr: Assign): String {
+        return parenthesize(expr.name.lexeme, expr.value)
+    }
+
     override fun visitBinaryExpr(expr: Binary): String {
         return parenthesize(expr.operator.lexeme, expr.left, expr.right)
     }
@@ -38,25 +42,8 @@ class AstPrinter : Printer() {
     override fun visitUnaryExpr(expr: Unary): String {
         return parenthesize(expr.operator.lexeme, expr.right)
     }
-}
 
-
-class RpnPrinter : Printer() {
-    override fun visitBinaryExpr(expr: Binary): String {
-        val left = expr.left.accept(this)
-        val right = expr.right.accept(this)
-        return "$left $right ${expr.operator.lexeme}"
-    }
-
-    override fun visitGroupingExpr(expr: Grouping): String {
-        return parenthesize("group", expr.expression)
-    }
-
-    override fun visitLiteralExpr(expr: Literal): String {
-        return expr.value?.toString() ?: "nil"
-    }
-
-    override fun visitUnaryExpr(expr: Unary): String {
-        return parenthesize(expr.operator.lexeme, expr.right)
+    override fun visitVariableExpr(expr: Variable): String {
+        return expr.name.lexeme
     }
 }
