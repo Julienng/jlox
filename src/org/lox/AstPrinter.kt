@@ -39,6 +39,10 @@ class AstPrinter : Printer() {
         return expr.value?.toString() ?: "nil"
     }
 
+    override fun visitLogicalExpr(expr: Logical): String {
+        return parenthesize(expr.operator.lexeme, expr.left, expr.right)
+    }
+
     override fun visitUnaryExpr(expr: Unary): String {
         return parenthesize(expr.operator.lexeme, expr.right)
     }
