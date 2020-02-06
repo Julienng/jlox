@@ -33,8 +33,13 @@ comparison      → addition ( ( ">" | ">=" | "<" | "<=" ) addition )* ;
 addition        → multiplication ( ( "-" | "+" ) multiplication )* ;
 multiplication  → unary ( ( "/" | "*" ) unary )* ;
 unary           → ( "!" | "-" ) unary
-                | primary ;
+                | call ;
+
+call            → primary ( "(" arguments? ")" )* ;
+arguments → expression ( "," expression )* ;
+
 primary         → "true" | "false" | "nil"
                 | NUMBER | STRING
                 | "(" expression ")"
                 | IDENTIFIER ;
+
