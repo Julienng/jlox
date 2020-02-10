@@ -4,50 +4,54 @@ import org.lox.ast.Expr
 import org.lox.ast.Expr.*
 
 abstract class Printer : Visitor<String> {
-    fun print(expr: Expr?): String {
-        if (expr == null) return "no expression to parse"
-        return expr.accept(this);
-    }
+	fun print(expr: Expr?): String {
+		if (expr == null) return "no expression to parse"
+		return expr.accept(this);
+	}
 
-    protected fun parenthesize(name: String, vararg exprs: Expr): String {
-        var builder = "";
+	protected fun parenthesize(name: String, vararg exprs: Expr): String {
+		var builder = "";
 
-        builder += "($name"
-        for (expr in exprs) {
-            builder += " ${expr.accept(this)}"
-        }
-        builder += ")"
+		builder += "($name"
+		for (expr in exprs) {
+			builder += " ${expr.accept(this)}"
+		}
+		builder += ")"
 
-        return builder
-    }
+		return builder
+	}
 }
 
 class AstPrinter : Printer() {
-    override fun visitAssignExpr(expr: Assign): String {
-        return parenthesize(expr.name.lexeme, expr.value)
-    }
+	override fun visitAssignExpr(expr: Assign): String {
+		return parenthesize(expr.name.lexeme, expr.value)
+	}
 
-    override fun visitBinaryExpr(expr: Binary): String {
-        return parenthesize(expr.operator.lexeme, expr.left, expr.right)
-    }
+	override fun visitBinaryExpr(expr: Binary): String {
+		return parenthesize(expr.operator.lexeme, expr.left, expr.right)
+	}
 
-    override fun visitGroupingExpr(expr: Grouping): String {
-        return parenthesize("group", expr.expression)
-    }
+	override fun visitCallExpr(expr: Call): String {
+		return parenthesize("fun", expr.callee)
+	}
 
-    override fun visitLiteralExpr(expr: Literal): String {
-        return expr.value?.toString() ?: "nil"
-    }
+	override fun visitGroupingExpr(expr: Grouping): String {
+		return parenthesize("group", expr.expression)
+	}
 
-    override fun visitLogicalExpr(expr: Logical): String {
-        return parenthesize(expr.operator.lexeme, expr.left, expr.right)
-    }
+	override fun visitLiteralExpr(expr: Literal): String {
+		return expr.value?.toString() ?: "nil"
+	}
 
-    override fun visitUnaryExpr(expr: Unary): String {
-        return parenthesize(expr.operator.lexeme, expr.right)
-    }
+	override fun visitLogicalExpr(expr: Logical): String {
+		return parenthesize(expr.operator.lexeme, expr.left, expr.right)
+	}
 
-    override fun visitVariableExpr(expr: Variable): String {
-        return expr.name.lexeme
-    }
+	override fun visitUnaryExpr(expr: Unary): String {
+		return parenthesize(expr.operator.lexeme, expr.right)
+	}
+
+	override fun visitVariableExpr(expr: Variable): String {
+		return expr.name.lexeme
+	}
 }

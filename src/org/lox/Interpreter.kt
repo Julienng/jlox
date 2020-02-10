@@ -4,217 +4,252 @@ import org.lox.ast.Expr
 import org.lox.ast.Stmt
 
 fun stringify(value: Any?): String {
-    if (value == null) return "nil"
+	if (value == null) return "nil"
 
-    // Hack. Work around Java adding ".0" to integer-valued doubles
-    if (value is Double) {
-        var text = value.toString()
-        if (text.endsWith(".0")) {
-            text = text.substring(0, text.length - 2)
-        }
-        return text
-    }
+	// Hack. Work around Java adding ".0" to integer-valued doubles
+	if (value is Double) {
+		var text = value.toString()
+		if (text.endsWith(".0")) {
+			text = text.substring(0, text.length - 2)
+		}
+		return text
+	}
 
-    return value.toString()
+	return value.toString()
 }
 
-class Interpreter : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
-    private var environment = Environment()
+class Interpreter() : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
+	val globals = Environment()
+	private var environment = globals
 
-    fun interpret(statements: List<Stmt?>) {
-        try {
-            for (statement in statements) {
-                execute(statement)
-            }
-        } catch (err: RuntimeError) {
-            runtimeError(err)
-        }
-    }
+	init {
+		globals.define("clock", object : LoxCallable {
+			override val arity: Int
+				get() = 0
 
-    private fun execute(stmt: Stmt?) {
-        stmt?.accept(this)
-    }
+			override fun call(interpreter: Interpreter, arguments: List<Any?>): Any? {
+				return System.currentTimeMillis() / 1000.0
+			}
 
-    private fun executeBlock(statements: List<Stmt?>, environment: Environment) {
-        val previous = this.environment
+			override fun toString() = "<native fn>"
+		})
+	}
 
-        try {
-            this.environment = environment
+	fun interpret(statements: List<Stmt?>) {
+		try {
+			for (statement in statements) {
+				execute(statement)
+			}
+		} catch (err: RuntimeError) {
+			runtimeError(err)
+		}
+	}
 
-            for (statement in statements) {
-                execute(statement)
-            }
-        } finally {
-            this.environment = previous
-        }
-    }
+	private fun execute(stmt: Stmt?) {
+		stmt?.accept(this)
+	}
 
-    override fun visitBlockStmt(stmt: Stmt.Block) {
-        executeBlock(stmt.statements, Environment(environment))
-    }
+	fun executeBlock(statements: List<Stmt?>, environment: Environment) {
+		val previous = this.environment
 
-    override fun visitVarStmt(stmt: Stmt.Var) {
-        var value: Any? = null
-        if (stmt.initializer != null) {
-            value = evaluate(stmt.initializer)
-        }
+		try {
+			this.environment = environment
 
-        environment.define(stmt.name.lexeme, value)
-    }
+			for (statement in statements) {
+				execute(statement)
+			}
+		} finally {
+			this.environment = previous
+		}
+	}
 
-    override fun visitWhileStmt(stmt: Stmt.While) {
-        while (isTruthy(evaluate(stmt.condition))) {
-            execute(stmt.body)
-        }
-    }
+	override fun visitBlockStmt(stmt: Stmt.Block) {
+		executeBlock(stmt.statements, Environment(environment))
+	}
 
-    override fun visitExpressionStmt(stmt: Stmt.Expression) {
-        evaluate(stmt.expression)
-    }
+	override fun visitVarStmt(stmt: Stmt.Var) {
+		var value: Any? = null
+		if (stmt.initializer != null) {
+			value = evaluate(stmt.initializer)
+		}
 
-    override fun visitIfStmt(stmt: Stmt.If) {
-        if (isTruthy(evaluate(stmt.condition))) {
-            execute(stmt.thenBranch)
-        } else if (stmt.elseBranch != null) {
-            execute(stmt.elseBranch)
-        }
-    }
+		environment.define(stmt.name.lexeme, value)
+	}
 
-    override fun visitPrintStmt(stmt: Stmt.Print) {
-        val value = evaluate(stmt.expression)
-        println(stringify(value))
-    }
+	override fun visitWhileStmt(stmt: Stmt.While) {
+		while (isTruthy(evaluate(stmt.condition))) {
+			execute(stmt.body)
+		}
+	}
 
-    override fun visitAssignExpr(expr: Expr.Assign): Any? {
-        val value = evaluate(expr.value)
+	override fun visitExpressionStmt(stmt: Stmt.Expression) {
+		evaluate(stmt.expression)
+	}
 
-        environment.assign(expr.name, value);
-        return value
-    }
+	override fun visitFunctionStmt(stmt: Stmt.Function) {
+		val function = LoxFunction(stmt)
+		environment.define(stmt.name.lexeme, function)
+	}
 
-    override fun visitBinaryExpr(expr: Expr.Binary): Any? {
-        val left = evaluate(expr.left)
-        val right = evaluate(expr.right)
+	override fun visitIfStmt(stmt: Stmt.If) {
+		if (isTruthy(evaluate(stmt.condition))) {
+			execute(stmt.thenBranch)
+		} else if (stmt.elseBranch != null) {
+			execute(stmt.elseBranch)
+		}
+	}
 
-        return when (expr.operator.type) {
-            TokenType.MINUS -> {
-                checkNumberOperands(expr.operator, left, right)
-                (left as Double) - (right as Double)
-            }
-            TokenType.SLASH -> {
-                checkNumberOperands(expr.operator, left, right)
-                checkNumberDivideByZero(expr.operator, right)
+	override fun visitPrintStmt(stmt: Stmt.Print) {
+		val value = evaluate(stmt.expression)
+		println(stringify(value))
+	}
 
-                (left as Double) / (right as Double)
-            }
-            TokenType.STAR -> {
-                checkNumberOperands(expr.operator, left, right)
-                (left as Double) * (right as Double)
-            }
-            TokenType.PLUS -> {
-                if (left is Double && right is Double)
-                    left + right
-                else if (left is String && right is String)
-                    left + right
-                else
-                    throw RuntimeError(
-                        expr.operator,
-                        "Operands must be two numbers or two strings."
-                    )
-            }
-            TokenType.GREATER -> {
-                checkNumberOperands(expr.operator, left, right)
-                (left as Double) > (right as Double)
-            }
-            TokenType.GREATER_EQUAL -> {
-                checkNumberOperands(expr.operator, left, right)
-                (left as Double) >= (right as Double)
-            }
-            TokenType.LESS -> {
-                checkNumberOperands(expr.operator, left, right)
-                (left as Double) < (right as Double)
-            }
-            TokenType.LESS_EQUAL -> {
-                checkNumberOperands(expr.operator, left, right)
-                (left as Double) <= (right as Double)
-            }
-            TokenType.BANG_EQUAL -> !isEqual(left, right)
-            TokenType.EQUAL_EQUAL -> isEqual(left, right)
-            // unreachable
-            else -> null
-        }
-    }
+	override fun visitAssignExpr(expr: Expr.Assign): Any? {
+		val value = evaluate(expr.value)
 
-    override fun visitGroupingExpr(expr: Expr.Grouping): Any? {
-        return evaluate(expr.expression)
-    }
+		environment.assign(expr.name, value);
+		return value
+	}
 
-    override fun visitLiteralExpr(expr: Expr.Literal): Any? {
-        return expr.value
-    }
+	override fun visitBinaryExpr(expr: Expr.Binary): Any? {
+		val left = evaluate(expr.left)
+		val right = evaluate(expr.right)
 
-    override fun visitLogicalExpr(expr: Expr.Logical): Any? {
-        val left = evaluate(expr.left)
+		return when (expr.operator.type) {
+			TokenType.MINUS -> {
+				checkNumberOperands(expr.operator, left, right)
+				(left as Double) - (right as Double)
+			}
+			TokenType.SLASH -> {
+				checkNumberOperands(expr.operator, left, right)
+				checkNumberDivideByZero(expr.operator, right)
 
-        if (expr.operator.type == TokenType.OR) {
-            if (isTruthy(left)) return left
-        } else {
-            if (!isTruthy(left)) return left
-        }
+				(left as Double) / (right as Double)
+			}
+			TokenType.STAR -> {
+				checkNumberOperands(expr.operator, left, right)
+				(left as Double) * (right as Double)
+			}
+			TokenType.PLUS -> {
+				if (left is Double && right is Double)
+					left + right
+				else if (left is String && right is String)
+					left + right
+				else
+					throw RuntimeError(
+						expr.operator,
+						"Operands must be two numbers or two strings."
+					)
+			}
+			TokenType.GREATER -> {
+				checkNumberOperands(expr.operator, left, right)
+				(left as Double) > (right as Double)
+			}
+			TokenType.GREATER_EQUAL -> {
+				checkNumberOperands(expr.operator, left, right)
+				(left as Double) >= (right as Double)
+			}
+			TokenType.LESS -> {
+				checkNumberOperands(expr.operator, left, right)
+				(left as Double) < (right as Double)
+			}
+			TokenType.LESS_EQUAL -> {
+				checkNumberOperands(expr.operator, left, right)
+				(left as Double) <= (right as Double)
+			}
+			TokenType.BANG_EQUAL -> !isEqual(left, right)
+			TokenType.EQUAL_EQUAL -> isEqual(left, right)
+			// unreachable
+			else -> null
+		}
+	}
 
-        return evaluate(expr.right)
-    }
+	override fun visitCallExpr(expr: Expr.Call): Any? {
+		val callee = evaluate(expr.callee)
 
-    override fun visitVariableExpr(expr: Expr.Variable): Any? {
-        return environment[expr.name]
-    }
+		if (!(callee is LoxCallable)) {
+			throw RuntimeError(expr.paren, "Can only call functions and classes.")
+		}
 
-    override fun visitUnaryExpr(expr: Expr.Unary): Any? {
-        val right = evaluate(expr.right)
+		val arguments = expr.arguments.map { evaluate(it) }
 
-        return when (expr.operator.type) {
-            TokenType.MINUS -> {
-                checkNumberOperand(expr.operator, right)
-                -(right as Double)
-            }
-            TokenType.BANG -> !isTruthy(right)
-            // unreachable
-            else -> null
-        }
-    }
+		if (arguments.size != callee.arity) {
+			throw RuntimeError(expr.paren, "Expected ${callee.arity} arguments but got ${arguments.size}.")
+		}
 
-    private fun evaluate(expr: Expr): Any? {
-        return expr.accept(this)
-    }
+		return callee.call(this, arguments)
+	}
 
-    private fun isTruthy(value: Any?): Boolean {
-        if (value == null) return false
-        if (value is Boolean) return value
-        return true
-    }
+	override fun visitGroupingExpr(expr: Expr.Grouping): Any? {
+		return evaluate(expr.expression)
+	}
 
-    private fun isEqual(left: Any?, right: Any?): Boolean {
-        if (left == null && right == null) return true
-        if (left == null) return false
+	override fun visitLiteralExpr(expr: Expr.Literal): Any? {
+		return expr.value
+	}
 
-        return left == right
-    }
+	override fun visitLogicalExpr(expr: Expr.Logical): Any? {
+		val left = evaluate(expr.left)
 
-    private fun checkNumberDivideByZero(operator: Token, operand: Any?) {
-        if (operand is Double && operand == 0.0) {
-            throw RuntimeError(operator, "Divide by zero is not valid.")
-        }
-    }
+		if (expr.operator.type == TokenType.OR) {
+			if (isTruthy(left)) return left
+		} else {
+			if (!isTruthy(left)) return left
+		}
 
-    private fun checkNumberOperand(operator: Token, operand: Any?) {
-        if (operand is Double) return
-        throw RuntimeError(operator, "Operand must be a number.")
-    }
+		return evaluate(expr.right)
+	}
 
-    private fun checkNumberOperands(operator: Token, left: Any?, right: Any?) {
-        if (left is Double && right is Double) return
-        throw RuntimeError(operator, "Operands must be numbers.")
-    }
+	override fun visitVariableExpr(expr: Expr.Variable): Any? {
+		return environment[expr.name]
+	}
+
+	override fun visitUnaryExpr(expr: Expr.Unary): Any? {
+		val right = evaluate(expr.right)
+
+		return when (expr.operator.type) {
+			TokenType.MINUS -> {
+				checkNumberOperand(expr.operator, right)
+				-(right as Double)
+			}
+			TokenType.BANG -> !isTruthy(right)
+			// unreachable
+			else -> null
+		}
+	}
+
+	private fun evaluate(expr: Expr): Any? {
+		return expr.accept(this)
+	}
+
+	private fun isTruthy(value: Any?): Boolean {
+		if (value == null) return false
+		if (value is Boolean) return value
+		return true
+	}
+
+	private fun isEqual(left: Any?, right: Any?): Boolean {
+		if (left == null && right == null) return true
+		if (left == null) return false
+
+		return left == right
+	}
+
+	private fun checkNumberDivideByZero(operator: Token, operand: Any?) {
+		if (operand is Double && operand == 0.0) {
+			throw RuntimeError(operator, "Divide by zero is not valid.")
+		}
+	}
+
+	private fun checkNumberOperand(operator: Token, operand: Any?) {
+		if (operand is Double) return
+		throw RuntimeError(operator, "Operand must be a number.")
+	}
+
+	private fun checkNumberOperands(operator: Token, left: Any?, right: Any?) {
+		if (left is Double && right is Double) return
+		throw RuntimeError(operator, "Operands must be numbers.")
+	}
 }
 
 class RuntimeError(val token: Token, message: String) : RuntimeException(message) {
