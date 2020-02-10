@@ -104,6 +104,12 @@ class Interpreter() : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 		println(stringify(value))
 	}
 
+	override fun visitReturnStmt(stmt: Stmt.Return) {
+		val value = if (stmt.value != null) evaluate(stmt.value) else null
+
+		throw Return(value)
+	}
+
 	override fun visitAssignExpr(expr: Expr.Assign): Any? {
 		val value = evaluate(expr.value)
 
