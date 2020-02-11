@@ -1,9 +1,10 @@
-fun fibonacci(n) {
-  if (n <= 1) return n;
-  return fibonacci(n - 2) + fibonacci(n - 1);
+var a = "outer";
+{
+    fun testA() {
+        print a;
+    }
+
+    testA();
+    var a = "inner";
+    testA();
 }
-var c = clock();
-for (var i = 0; i < 20; i = i + 1) {
-  print fibonacci(i);
-}
-print clock() - c;
