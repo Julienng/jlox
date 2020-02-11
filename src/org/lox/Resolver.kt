@@ -14,6 +14,11 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         endScope()
     }
 
+    override fun visitClassStmt(stmt: Stmt.Class) {
+        declare(stmt.name)
+        define(stmt.name)
+    }
+
     override fun visitVarStmt(stmt: Stmt.Var) {
         declare(stmt.name)
         if (stmt.initializer != null) {
@@ -89,6 +94,10 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         }
     }
 
+    override fun visitGetExpr(expr: Expr.Get) {
+        resolve(expr.`object`)
+    }
+
     override fun visitGroupingExpr(expr: Expr.Grouping) {
         resolve(expr.expression)
     }
@@ -100,6 +109,11 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     override fun visitLogicalExpr(expr: Expr.Logical) {
         resolve(expr.left)
         resolve(expr.right)
+    }
+
+    override fun visitSetExpr(expr: Expr.Set) {
+        resolve(expr.value)
+        resolve(expr.`object`)
     }
 
     override fun visitUnaryExpr(expr: Expr.Unary) {
