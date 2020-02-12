@@ -62,4 +62,8 @@ class AstPrinter : Printer() {
     override fun visitSetExpr(expr: Expr.Set): String {
         return parenthesize("set-${expr.name.lexeme}", expr.value)
     }
+
+    override fun visitThisExpr(expr: This): String {
+        return expr.keyword.lexeme
+    }
 }

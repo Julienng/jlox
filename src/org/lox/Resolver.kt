@@ -7,6 +7,7 @@ import java.util.*
 class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.Visitor<Unit> {
     private val scopes = Stack<MutableMap<String, Boolean>>()
     private var currentFunction = FunctionType.NONE
+    private var currentClass = ClassType.NONE
 
     override fun visitBlockStmt(stmt: Stmt.Block) {
         beginScope()
@@ -15,8 +16,23 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
     }
 
     override fun visitClassStmt(stmt: Stmt.Class) {
+        val enclosingClass = currentClass
+        currentClass = ClassType.CLASS
+
         declare(stmt.name)
         define(stmt.name)
+
+        beginScope()
+        scopes.peek().put("this", true)
+
+        for (method in stmt.methods) {
+            val declaration = FunctionType.METHOD
+            resolveFunction(method, declaration)
+        }
+
+        endScope()
+
+        currentClass = enclosingClass
     }
 
     override fun visitVarStmt(stmt: Stmt.Var) {
@@ -116,6 +132,14 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         resolve(expr.`object`)
     }
 
+    override fun visitThisExpr(expr: Expr.This) {
+        if (currentClass == ClassType.NONE) {
+            error(expr.keyword, "Cannot use 'this' outside of a class.")
+            return
+        }
+        resolveLocal(expr, expr.keyword)
+    }
+
     override fun visitUnaryExpr(expr: Expr.Unary) {
         resolve(expr.right)
     }
@@ -177,5 +201,11 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
 
 enum class FunctionType {
     NONE,
-    FUNCTION
+    FUNCTION,
+    METHOD
+}
+
+enum class ClassType {
+    NONE,
+    CLASS
 }

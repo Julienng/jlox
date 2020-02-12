@@ -3,12 +3,16 @@ package org.lox
 class LoxInstance(private val klass: LoxClass) {
     private val fields = mutableMapOf<String, Any?>()
 
-    operator fun get(name: Token) =
+    operator fun get(name: Token): Any? {
         if (fields.containsKey(name.lexeme)) {
-            fields[name.lexeme]
-        } else {
-            throw RuntimeError(name, "Undefined property '${name.lexeme}'.")
+            return fields[name.lexeme]
         }
+
+        val method = klass.findMethod(name.lexeme)
+        if (method != null) return method.bind(this)
+
+        throw RuntimeError(name, "Undefined property '${name.lexeme}'.")
+    }
 
     operator fun set(name: Token, value: Any?) = fields.put(name.lexeme, value)
 
