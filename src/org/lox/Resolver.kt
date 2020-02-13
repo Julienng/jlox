@@ -4,7 +4,8 @@ import org.lox.ast.Expr
 import org.lox.ast.Stmt
 import java.util.*
 
-class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.Visitor<Unit> {
+class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>,
+    Stmt.Visitor<Unit> {
     private val scopes = Stack<MutableMap<String, Boolean>>()
     private var currentFunction = FunctionType.NONE
     private var currentClass = ClassType.NONE
@@ -26,7 +27,8 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         scopes.peek().put("this", true)
 
         for (method in stmt.methods) {
-            val declaration = FunctionType.METHOD
+            val declaration =
+                if (method.name.lexeme == "init") FunctionType.INITIALIZER else FunctionType.METHOD
             resolveFunction(method, declaration)
         }
 
@@ -45,7 +47,10 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
 
     override fun visitVariableExpr(expr: Expr.Variable) {
         if (scopes.isNotEmpty() && scopes.peek()[expr.name.lexeme] == false) {
-            error(expr.name, "Cannot read local variable in its own initializer.")
+            error(
+                expr.name,
+                "Cannot read local variable in its own initializer."
+            )
         }
 
         resolveLocal(expr, expr.name)
@@ -88,6 +93,9 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         }
 
         if (stmt.value != null) {
+            if (currentFunction == FunctionType.INITIALIZER) {
+                error(stmt.keyword, "Cannot return a value from an initializer.")
+            }
             resolve(stmt.value)
         }
     }
@@ -179,7 +187,10 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
         if (scopes.isEmpty()) return
         val scope = scopes.peek()
         if (scope.containsKey(name.lexeme)) {
-            error(name, "Variable with this name is already declared in this scope.")
+            error(
+                name,
+                "Variable with this name is already declared in this scope."
+            )
         }
         scope[name.lexeme] = false
     }
@@ -202,6 +213,7 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>, Stmt.
 enum class FunctionType {
     NONE,
     FUNCTION,
+    INITIALIZER,
     METHOD
 }
 

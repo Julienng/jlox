@@ -5,10 +5,17 @@ class LoxClass(
     val methods: MutableMap<String, LoxFunction>
 ) : LoxCallable {
     override val arity: Int
-        get() = 0
+        get() {
+            val initializer = findMethod("init")
+            return initializer?.arity ?: 0
+        }
 
     override fun call(interpreter: Interpreter, arguments: List<Any?>): Any? {
-        return LoxInstance(this)
+        val instance = LoxInstance(this)
+        val initializer = findMethod("init")
+        initializer?.bind(instance)?.call(interpreter, arguments)
+
+        return instance
     }
 
     fun findMethod(name: String): LoxFunction? {

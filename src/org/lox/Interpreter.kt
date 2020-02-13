@@ -77,7 +77,7 @@ class Interpreter() : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
 
         val methods = mutableMapOf<String, LoxFunction>()
         for (method in stmt.methods) {
-            val function = LoxFunction(method, environment)
+            val function = LoxFunction(method, environment, method.name.lexeme == "init")
             methods[method.name.lexeme] = function
         }
 
@@ -105,7 +105,7 @@ class Interpreter() : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
     }
 
     override fun visitFunctionStmt(stmt: Stmt.Function) {
-        val function = LoxFunction(stmt, environment)
+        val function = LoxFunction(stmt, environment, false)
         environment.define(stmt.name.lexeme, function)
     }
 
@@ -203,7 +203,10 @@ class Interpreter() : Expr.Visitor<Any?>, Stmt.Visitor<Unit> {
         val arguments = expr.arguments.map { evaluate(it) }
 
         if (arguments.size != callee.arity) {
-            throw RuntimeError(expr.paren, "Expected ${callee.arity} arguments but got ${arguments.size}.")
+            throw RuntimeError(
+                expr.paren,
+                "Expected ${callee.arity} arguments but got ${arguments.size}."
+            )
         }
 
         return callee.call(this, arguments)
