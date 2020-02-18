@@ -30,7 +30,7 @@ fun main(args: Array<String>) {
     defineAst(
         outputDir, "Stmt", listOf(
             "Block      : List<Stmt?> statements",
-            "Class      : Token name, List<Stmt.Function> methods",
+            "Class      : Token name, Expr.Variable? superClass, List<Stmt.Function> methods",
             "Expression : Expr expression",
             "Function   : Token name, List<Token> params, List<Stmt?> body",
             "If         : Expr condition, Stmt thenBranch, Stmt? elseBranch",

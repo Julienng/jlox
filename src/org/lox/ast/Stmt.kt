@@ -22,7 +22,8 @@ abstract class Stmt {
         }
     }
 
-    class Class(val name: Token, val methods: List<Stmt.Function>) : Stmt() {
+    class Class(val name: Token, val superClass: Expr.Variable?, val methods: List<Stmt.Function>) :
+        Stmt() {
 
         override fun <R> accept(visitor: Visitor<R>): R {
             return visitor.visitClassStmt(this)

@@ -2,6 +2,7 @@ package org.lox
 
 class LoxClass(
     val name: String,
+    val superClass: LoxClass?,
     val methods: MutableMap<String, LoxFunction>
 ) : LoxCallable {
     override val arity: Int
@@ -21,6 +22,10 @@ class LoxClass(
     fun findMethod(name: String): LoxFunction? {
         if (methods.containsKey(name)) {
             return methods[name]
+        }
+
+        if (superClass != null) {
+            return superClass.findMethod(name)
         }
 
         return null

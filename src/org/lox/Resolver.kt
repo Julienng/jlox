@@ -23,12 +23,22 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>,
         declare(stmt.name)
         define(stmt.name)
 
+        if (stmt.superClass != null) {
+            if (stmt.name.lexeme == stmt.superClass.name.lexeme) {
+                error(stmt.superClass.name, "A class cannot inherit from itself.")
+            }
+            resolve(stmt.superClass)
+        }
+
         beginScope()
         scopes.peek().put("this", true)
 
         for (method in stmt.methods) {
             val declaration =
-                if (method.name.lexeme == "init") FunctionType.INITIALIZER else FunctionType.METHOD
+                if (method.name.lexeme == "init")
+                    FunctionType.INITIALIZER
+                else
+                    FunctionType.METHOD
             resolveFunction(method, declaration)
         }
 
