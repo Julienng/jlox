@@ -50,7 +50,7 @@ call            → primary ( "(" arguments? ")" | "." IDENTIFIER )* ;
 arguments → expression ( "," expression )* ;
 
 primary         → "true" | "false" | "nil"
-                | NUMBER | STRING
+                | NUMBER | STRING | IDENTIFIER
                 | "(" expression ")"
-                | IDENTIFIER ;
+                | "super" "." IDENTIFIER;
 

@@ -27,7 +27,11 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>,
             if (stmt.name.lexeme == stmt.superClass.name.lexeme) {
                 error(stmt.superClass.name, "A class cannot inherit from itself.")
             }
+            currentClass = ClassType.SUBCLASS
             resolve(stmt.superClass)
+
+            beginScope()
+            scopes.peek().put("super", true)
         }
 
         beginScope()
@@ -43,6 +47,8 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>,
         }
 
         endScope()
+
+        if (stmt.superClass != null) endScope()
 
         currentClass = enclosingClass
     }
@@ -150,6 +156,21 @@ class Resolver(private val interpreter: Interpreter) : Expr.Visitor<Unit>,
         resolve(expr.`object`)
     }
 
+    override fun visitSuperExpr(expr: Expr.Super) {
+        when {
+            currentClass == ClassType.NONE -> error(
+                expr.keyword,
+                "Cannot user 'super' outside of a class."
+            )
+            currentClass != ClassType.SUBCLASS -> error(
+                expr.keyword,
+                "Cannot use 'super' in a class with no superclass."
+            )
+        }
+
+        resolveLocal(expr, expr.keyword)
+    }
+
     override fun visitThisExpr(expr: Expr.This) {
         if (currentClass == ClassType.NONE) {
             error(expr.keyword, "Cannot use 'this' outside of a class.")
@@ -229,5 +250,6 @@ enum class FunctionType {
 
 enum class ClassType {
     NONE,
-    CLASS
+    CLASS,
+    SUBCLASS
 }
